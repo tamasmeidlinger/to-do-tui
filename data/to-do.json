@@ -2,13 +2,7 @@
   {
     "id": "personal",
     "categoryName": "Personal",
-    "toDos": [
-      {
-        "id": "95192aea",
-        "title": "Start Next.js Roadmap",
-        "details": null
-      }
-    ]
+    "toDos": []
   },
   {
     "id": "discrete-math",
