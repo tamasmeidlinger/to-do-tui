@@ -5,14 +5,31 @@
     "toDos": [
       {
         "id": "c171bf76",
-        "title": "Learn about CPU",
-        "details": "Learn about inner stuff of CPUS"
+        "title": "Learn about GPU",
+        "details": "Learn much much more about GPUS"
       }
     ]
   },
   {
     "id": "python",
     "categoryName": "Python",
-    "toDos": []
+    "toDos": [
+      {
+        "id": "bc9ca368",
+        "title": "Learn about generator expressions",
+        "details": "Go on roadmap blabla\nSo you can yeah"
+      }
+    ]
+  },
+  {
+    "id": "discrete-math",
+    "categoryName": "Discrete Math",
+    "toDos": [
+      {
+        "id": "c277d202",
+        "title": "Start learning sets",
+        "details": "Chapter 1.2\nGo ahead and do that"
+      }
+    ]
   }
 ]

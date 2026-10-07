@@ -1,15 +1,21 @@
 import json
 from pathlib import Path
+from collections.abc import Callable
 
 
 def rearrange_todos(
-    category_id: str, path_to_json: Path, to_do_id: str, new_place: int
+    category_id: str,
+    path_to_json: Path,
+    to_do_id: str,
+    new_place: int,
+    on_error: Callable[[str], None] | None = None,
 ) -> bool | None:
     try:
         with open(path_to_json, "r") as file:
             json_data = json.load(file)
     except (FileNotFoundError, PermissionError, OSError, json.JSONDecodeError) as e:
-        print(f"Error: {e}")
+        if on_error:
+            on_error(str(e))
         return False
 
     to_dos_list = None
@@ -21,13 +27,16 @@ def rearrange_todos(
         continue
 
     if not to_dos_list:
-        print("Category not found")
+        if on_error:
+            on_error("Category not found")
         return False
 
     if len(to_dos_list) < new_place:
-        print(
-            f"Cannot make that item number: {new_place}, max_number is {len(to_dos_list)}"
-        )
+        if on_error:
+            on_error(
+                f"Cannot make that item number: {new_place}, "
+                f"max_number is {len(to_dos_list)}"
+            )
         return False
 
     to_do_copy = None
@@ -39,7 +48,8 @@ def rearrange_todos(
         continue
 
     if not to_do_copy:
-        print("Invalid Id")
+        if on_error:
+            on_error("Invalid Id")
         return False
 
     to_dos_list.remove(to_do_copy)
@@ -49,8 +59,8 @@ def rearrange_todos(
     try:
         with open(path_to_json, "w") as file:
             json.dump(json_data, file, indent=2)
-            print("Success")
             return True
     except (FileNotFoundError, PermissionError, OSError, json.JSONDecodeError) as e:
-        print(f"Error: {e}")
+        if on_error:
+            on_error(str(e))
         return False

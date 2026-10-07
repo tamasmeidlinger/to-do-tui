@@ -1,4 +1,4 @@
-from tui import start
+from app import start
 
 
 if __name__ == "__main__":

@@ -1,13 +1,20 @@
 import json
 from pathlib import Path
+from collections.abc import Callable
 
 
-def delete_todo(category_id: str, path_to_json: Path, todo_id: str) -> bool:
+def delete_todo(
+    category_id: str,
+    path_to_json: Path,
+    todo_id: str,
+    on_error: Callable[[str], None] | None = None,
+) -> bool:
     try:
         with open(path_to_json, "r") as file:
             json_data: list[dict] = json.load(file)
     except (FileNotFoundError, PermissionError, OSError) as e:
-        print(f"Error: {e}")
+        if on_error:
+            on_error(str(e))
         return False
 
     item_to_remove = None
@@ -21,17 +28,19 @@ def delete_todo(category_id: str, path_to_json: Path, todo_id: str) -> bool:
                     break
                 continue
             if not item_to_remove:
-                print(f"No item with id: {todo_id}")
+                if on_error:
+                    on_error(f"No item with id: {todo_id}")
                 return False
 
             try:
                 with open(path_to_json, "w") as file:
                     json.dump(json_data, file, indent=2)
-                    print(f"Removed item: {item_to_remove}")
                     return True
             except (FileNotFoundError, PermissionError, OSError) as e:
-                print(f"Error message: {e}")
+                if on_error:
+                    on_error(str(e))
                 return False
         continue
-    print("Category not found")
+    if on_error:
+        on_error("Category not found")
     return False

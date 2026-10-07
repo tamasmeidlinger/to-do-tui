@@ -1,14 +1,21 @@
 import json
 import uuid
 from pathlib import Path
+from collections.abc import Callable
 
 
-def add_todo(category_id: str, path_to_json: Path, to_add: dict) -> bool:
+def add_todo(
+    category_id: str,
+    path_to_json: Path,
+    to_add: dict,
+    on_error: Callable[[str], None] | None = None,
+) -> bool:
     try:
         with open(path_to_json, "r") as file:
             json_data: list[dict] = json.load(file)
     except (FileNotFoundError, PermissionError, OSError) as e:
-        print(f"Error: {e}")
+        if on_error:
+            on_error(str(e))
         return False
 
     for item in json_data:
@@ -20,8 +27,10 @@ def add_todo(category_id: str, path_to_json: Path, to_add: dict) -> bool:
                     json.dump(json_data, file, indent=2)
                     return True
             except (FileNotFoundError, PermissionError, OSError) as e:
-                print(f"Error message: {e}")
+                if on_error:
+                    on_error(str(e))
                 return False
         continue
-    print("Category not found")
+    if on_error:
+        on_error("Category not found")
     return False

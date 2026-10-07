@@ -1,4 +1,5 @@
 import json
+from collections.abc import Callable
 from pathlib import Path
 
 
@@ -8,12 +9,14 @@ def edit_todo(
     todo_id: str,
     editTitle: str | None = None,
     editDetails: str | None = None,
+    on_error: Callable[[str], None] | None = None,
 ) -> bool | None:
     try:
         with open(path_to_json, "r") as file:
             json_data: list[dict] = json.load(file)
     except (FileNotFoundError, PermissionError, OSError) as e:
-        print(f"Error: {e}")
+        if on_error:
+            on_error(str(e))
         return False
 
     is_category_found = False
@@ -33,31 +36,31 @@ def edit_todo(
                         todo["details"] = None
                     else:
                         todo["details"] = editDetails
-                    print(todo)
 
     if not is_category_found:
-        print("Category not found")
+        if on_error:
+            on_error("Category not found")
         return False
     if not is_todo_id_found:
-        print("Todo id not found")
+        if on_error:
+            on_error("Todo id not found")
         return False
 
-    with open(path_to_json, "w") as file:
-        try:
+    try:
+        with open(path_to_json, "w") as file:
             json.dump(json_data, file, indent=2)
-            print("Edit successful")
             return True
-        except (FileNotFoundError, PermissionError, OSError) as e:
-            print(f"Error: {e}")
-            return False
+    except (FileNotFoundError, PermissionError, OSError) as e:
+        if on_error:
+            on_error(str(e))
+        return False
 
 
 if __name__ == "__main__":
-    PATH = Path(__file__).parent.parent / "data" / "to-do-test.json"
-    print(PATH)
+    path = Path(__file__).parent.parent / "data" / "to-do-test.json"
     edit_todo(
         "computer-systems",
-        PATH,
+        path,
         "c171bf76",
         editDetails="Learn about inner stuff of CPUS",
     )
