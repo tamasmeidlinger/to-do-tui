@@ -32,7 +32,7 @@ from utils.rearrange_todos import rearrange_todos
 def _category_bindings() -> list[Binding]:
     return [
         Binding(key, f"select_category({index})", show=False)
-        for index, key in enumerate("1234567890")
+        for index, key in enumerate("123456789")
     ]
 
 
@@ -51,6 +51,7 @@ class TodoApp(App[None]):
     #categories {
         height: 2;
         padding: 0 1;
+        margin-bottom: 1;
         overflow-x: hidden;
     }
     .category-tab {
@@ -71,6 +72,7 @@ class TodoApp(App[None]):
     #status-bar {
         height: 2;
         padding: 0 2;
+        margin-bottom: 1;
     }
     #mode {
         width: auto;
@@ -90,7 +92,7 @@ class TodoApp(App[None]):
     }
     #todo-panel {
         height: 1fr;
-        margin: 1 2;
+        margin: 0 2 1 2;
         padding: 0 1;
         border: round #777777;
         background: #202020;
@@ -198,7 +200,7 @@ class TodoApp(App[None]):
                 data = json.load(file)
             if not isinstance(data, list):
                 raise ValueError("Expected a list of categories")
-            self.categories = data
+            self.categories = data[:9]
         except (OSError, json.JSONDecodeError, ValueError) as exc:
             self.categories = []
             self.message = f"Could not read {self.path}: {exc}"
@@ -210,7 +212,7 @@ class TodoApp(App[None]):
             with Horizontal(id="categories"):
                 if self.categories:
                     for index, category in enumerate(self.categories):
-                        number = str((index + 1) % 10) if index < 10 else str(index + 1)
+                        number = str(index + 1)
                         label = Text(f"{number}. {category.get('categoryName', 'Category')}")
                         classes = "category-tab active" if index == self.category_index else "category-tab"
                         yield Static(label, id=f"category-{index}", classes=classes)
@@ -252,7 +254,7 @@ class TodoApp(App[None]):
                     rendered.append("\n")
         self.query_one("#todo-lines", Static).update(rendered)
         self.query_one("#help", Static).update(
-            "1-0 categories  i select  Esc quit"
+            "1-9 categories  i select  Esc quit"
             if not self.select_mode
             else "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
         )

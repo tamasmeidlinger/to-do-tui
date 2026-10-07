@@ -60,7 +60,7 @@ class TodoUI:
                 data = json.load(file)
             if not isinstance(data, list):
                 raise ValueError("Expected a list of categories")
-            self.categories = data
+            self.categories = data[:9]
         except (OSError, json.JSONDecodeError, ValueError) as exc:
             self.categories = []
             self.message = f"Could not read {self.path}: {exc}"
@@ -104,8 +104,8 @@ class TodoUI:
             return
 
         x = 1
-        for index, category in enumerate(self.categories[:10]):
-            name = f"[{(index + 1) % 10}] {category.get('categoryName', 'Category')}"
+        for index, category in enumerate(self.categories[:9]):
+            name = f"[{index + 1}] {category.get('categoryName', 'Category')}"
             attr = (
                 self._attr(2)
                 if index == self.category_index and self.colors
@@ -143,7 +143,7 @@ class TodoUI:
             )
             self._put(row, 2, line[: max(0, width - 4)], attr)
         help_line = (
-            "1-0 categories  i select  Esc quit"
+            "1-9 categories  i select  Esc quit"
             if not self.select_mode
             else "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
         )
@@ -186,8 +186,8 @@ class TodoUI:
                     self.select_mode = True
                     self.message = "Select a to-do"
                 return
-            if isinstance(key, str) and key in "1234567890":
-                index = (int(key) - 1) % 10
+            if isinstance(key, str) and key in "123456789":
+                index = int(key) - 1
                 if index < len(self.categories):
                     self.category_index = index
                     self.todo_index = 0

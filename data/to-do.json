@@ -1,30 +1,33 @@
 [
   {
-    "id": "computer-systems",
-    "categoryName": "Computer Systems",
+    "id": "personal",
+    "categoryName": "Personal",
     "toDos": [
       {
-        "title": "Continue with registers",
-        "details": "Continue learning registers from book chapter 1.8"
-      },
-      {
-        "title": "Copy images",
-        "details": "Copy images from other to the appropriate places"
+        "id": "95192aea",
+        "title": "Start Next.js Roadmap",
+        "details": null
       }
     ]
   },
   {
-    "id": "python",
-    "categoryName": "Python",
-    "toDos": [
-      {
-        "title": "Continue Python Roadmap",
-        "details": "Continue with generator expressions"
-      },
-      {
-        "title": "Make plan",
-        "details": null
-      }
-    ]
+    "id": "discrete-math",
+    "categoryName": "Discrete Math",
+    "toDos": []
+  },
+  {
+    "id": "computer-systems",
+    "categoryName": "Computer Systems",
+    "toDos": []
+  },
+  {
+    "id": "discrete-math",
+    "categoryName": "Discrete Math",
+    "toDos": []
+  },
+  {
+    "id": "semester-project",
+    "categoryName": "Semester Project",
+    "toDos": []
   }
 ]
