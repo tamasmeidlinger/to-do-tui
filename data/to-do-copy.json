@@ -1,0 +1,30 @@
+[
+  {
+    "id": "computer-systems",
+    "categoryName": "Computer Systems",
+    "toDos": [
+      {
+        "title": "Continue with registers",
+        "details": "Continue learning registers from book chapter 1.8"
+      },
+      {
+        "title": "Copy images",
+        "details": "Copy images from other to the appropriate places"
+      }
+    ]
+  },
+  {
+    "id": "python",
+    "categoryName": "Python",
+    "toDos": [
+      {
+        "title": "Continue Python Roadmap",
+        "details": "Continue with generator expressions"
+      },
+      {
+        "title": "Make plan",
+        "details": null
+      }
+    ]
+  }
+]

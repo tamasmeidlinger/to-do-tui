@@ -1,0 +1,18 @@
+[
+  {
+    "id": "computer-systems",
+    "categoryName": "Computer Systems",
+    "toDos": [
+      {
+        "id": "c171bf76",
+        "title": "Learn about CPU",
+        "details": "Learn about inner stuff of CPUS"
+      }
+    ]
+  },
+  {
+    "id": "python",
+    "categoryName": "Python",
+    "toDos": []
+  }
+]
