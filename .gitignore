@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# JSONS containing data except empty backup and test
+data/to-do.json

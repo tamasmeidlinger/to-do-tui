@@ -1,0 +1,27 @@
+[
+  {
+    "id": "personal",
+    "categoryName": "Personal",
+    "toDos": []
+  },
+  {
+    "id": "python",
+    "categoryName": "Python",
+    "toDos": []
+  },
+  {
+    "id": "computer-systems",
+    "categoryName": "Computer Systems",
+    "toDos": []
+  },
+  {
+    "id": "discrete-math",
+    "categoryName": "Discrete Math",
+    "toDos": []
+  },
+  {
+    "id": "semester-project",
+    "categoryName": "Semester Project",
+    "toDos": []
+  }
+]

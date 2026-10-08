@@ -2,12 +2,59 @@
   {
     "id": "personal",
     "categoryName": "Personal",
-    "toDos": []
+    "toDos": [
+      {
+        "id": "587270be",
+        "title": "To-do app - add jsons to .gitignore",
+        "details": "Only needed for the to-do.json\nNot the others\nKeep one empty one for backup"
+      },
+      {
+        "id": "cb8d52ba",
+        "title": "Markdown neovim",
+        "details": "Link to github repo save in Messages"
+      },
+      {
+        "id": "7afee98a",
+        "title": "Codex usage remaining",
+        "details": "Whether that means there 93% left"
+      },
+      {
+        "id": "91f72044",
+        "title": "Codex Chat - Not agent",
+        "details": "Could be good for explaining code"
+      },
+      {
+        "id": "6ea7643c",
+        "title": "Look at lego job posting",
+        "details": "Stuff they need/you need to look into"
+      },
+      {
+        "id": "a1f7fb12",
+        "title": "Words to incorporate in proffesional speech",
+        "details": "1. Capabilities\n2. Feasibility"
+      }
+    ]
   },
   {
-    "id": "discrete-math",
-    "categoryName": "Discrete Math",
-    "toDos": []
+    "id": "python",
+    "categoryName": "Python",
+    "toDos": [
+      {
+        "id": "6fdf1e2e",
+        "title": "start python roadmap",
+        "details": "You can get nice summaries on freeCodeCamp\n"
+      },
+      {
+        "id": "f01a6806",
+        "title": "pathlib/os.path",
+        "details": "Learn about how to handle paths in python\n- also maybe os operation like move/copy etc."
+      },
+      {
+        "id": "0fd34816",
+        "title": "file openings and operations",
+        "details": "Learn about how opening files work and how it works\n- like how cursor and moving around in the file works"
+      }
+    ]
   },
   {
     "id": "computer-systems",
