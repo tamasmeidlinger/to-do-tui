@@ -1,0 +1,26 @@
+{
+  "start_date": "2026-10-05",
+  "end_date": "2026-10-11",
+  "items": [
+    {
+      "id": "a2176104",
+      "name": "Python",
+      "done": false
+    },
+    {
+      "id": "9da9b988",
+      "name": "Computer Systems",
+      "done": false
+    },
+    {
+      "id": "11650b1f",
+      "name": "Discrete Math",
+      "done": false
+    },
+    {
+      "id": "8b0717b1",
+      "name": "Semester Project",
+      "done": false
+    }
+  ]
+}

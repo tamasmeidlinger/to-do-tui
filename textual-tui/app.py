@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -22,11 +23,30 @@ from rich.text import Text
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+WEEKLY_UTILS = PROJECT_ROOT / "utils" / "weekly-tasks"
+if str(WEEKLY_UTILS) not in sys.path:
+    sys.path.insert(0, str(WEEKLY_UTILS))
 
 from utils.add_todo import add_todo
+from utils.add_category import add_category
+from utils.delete_category import delete_category
 from utils.delete_todo import delete_todo
 from utils.edit_todo import edit_todo
+from utils.rearrange_categories import rearrange_categories
 from utils.rearrange_todos import rearrange_todos
+from weekly_tasks import (
+    add_weekly_task,
+    delete_weekly_task,
+    load_weekly_tasks,
+    rearrange_weekly_task,
+    set_weekly_dates,
+    toggle_weekly_task,
+)
+
+MONTH_ABBREVIATIONS = (
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+)
 
 
 def _category_bindings() -> list[Binding]:
@@ -54,6 +74,30 @@ class TodoApp(App[None]):
         margin-bottom: 1;
         overflow-x: hidden;
     }
+    #categories.hidden {
+        display: none;
+    }
+    #no-categories {
+        display: none;
+        height: 1;
+        padding: 0 1;
+        color: #929292;
+    }
+    #no-categories.visible {
+        display: block;
+    }
+    #weekly-header {
+        display: none;
+        height: 2;
+        padding: 0 2;
+        margin-bottom: 1;
+        color: #e0e0e0;
+        text-style: bold;
+        content-align: left middle;
+    }
+    #weekly-header.visible {
+        display: block;
+    }
     .category-tab {
         height: 1;
         width: auto;
@@ -63,6 +107,9 @@ class TodoApp(App[None]):
         background: #303030;
         color: #b8b8b8;
         content-align: left middle;
+    }
+    .category-tab.hidden {
+        display: none;
     }
     .category-tab.active {
         background: #d8d8d8;
@@ -133,7 +180,8 @@ class TodoApp(App[None]):
 
     BINDINGS = [
         *_category_bindings(),
-        Binding("i", "enter_select", "Select mode"),
+        Binding("0", "enter_weekly", "Weekly tasks"),
+        Binding("i", "enter_select", "Select / insert mode"),
         Binding("enter", "enter_select", show=False),
         Binding("escape", "back", "Back / quit"),
         Binding("q", "back", show=False),
@@ -146,6 +194,7 @@ class TodoApp(App[None]):
         Binding("d", "delete_todo", "Delete", show=False),
         Binding("e", "edit_todo", "Edit", show=False),
         Binding("r", "rearrange_todo", "Reorder", show=False),
+        Binding("space", "toggle_weekly_task", "Toggle done", show=False),
     ]
 
     def __init__(self, path: str | Path | None = None):
@@ -169,10 +218,15 @@ class TodoApp(App[None]):
         )
         self.theme = "todo-gray"
         self.path = Path(path) if path is not None else Path.cwd() / "data" / "to-do-test.json"
+        self.weekly_path = PROJECT_ROOT / "data" / "weekly-tasks.json"
         self.categories: list[dict[str, Any]] = []
         self.category_index = 0
         self.todo_index = 0
         self.select_mode = False
+        self.weekly_mode = False
+        self.weekly_insert_mode = False
+        self.weekly_index = 0
+        self.weekly_data: dict[str, Any] = {"start_date": "", "end_date": "", "items": []}
         self.message = ""
         self._load_data()
 
@@ -194,6 +248,17 @@ class TodoApp(App[None]):
             return self.current_todos[self.todo_index]
         return None
 
+    @property
+    def current_weekly_items(self) -> list[dict[str, Any]]:
+        items = self.weekly_data.get("items", [])
+        return items if isinstance(items, list) else []
+
+    @property
+    def current_weekly_task(self) -> dict[str, Any] | None:
+        if 0 <= self.weekly_index < len(self.current_weekly_items):
+            return self.current_weekly_items[self.weekly_index]
+        return None
+
     def _load_data(self) -> None:
         try:
             with self.path.open(encoding="utf-8") as file:
@@ -210,14 +275,10 @@ class TodoApp(App[None]):
     def compose(self) -> ComposeResult:
         with Vertical(id="app-frame"):
             with Horizontal(id="categories"):
-                if self.categories:
-                    for index, category in enumerate(self.categories):
-                        number = str(index + 1)
-                        label = Text(f"{number}. {category.get('categoryName', 'Category')}")
-                        classes = "category-tab active" if index == self.category_index else "category-tab"
-                        yield Static(label, id=f"category-{index}", classes=classes)
-                else:
-                    yield Static("No categories", id="no-categories")
+                yield Static("No categories", id="no-categories", classes="visible")
+                for index in range(9):
+                    yield Static("", id=f"category-{index}", classes="category-tab hidden")
+            yield Static("", id="weekly-header", markup=False)
             with Horizontal(id="status-bar"):
                 yield Static("NORMAL", id="mode", markup=False)
                 yield Static(self.message, id="status", markup=False)
@@ -234,13 +295,38 @@ class TodoApp(App[None]):
         if not self.is_mounted:
             return
         category = self.current_category
-        heading = category.get("categoryName", "Todos") if category else "Todos"
+        heading = "Weekly tasks" if self.weekly_mode else (
+            category.get("categoryName", "Todos") if category else "Todos"
+        )
         self.query_one("#todo-heading", Static).update(Text(str(heading)))
-        self.query_one("#mode", Static).update("SELECT" if self.select_mode else "NORMAL")
+        if self.weekly_mode:
+            mode_label = "INSERT" if self.weekly_insert_mode else "NORMAL"
+        else:
+            mode_label = "SELECT" if self.select_mode else "NORMAL"
+        self.query_one("#mode", Static).update(mode_label)
         self.query_one("#status", Static).update(Text(self.message))
+        self.query_one("#categories").set_class(self.weekly_mode, "hidden")
+        weekly_header = self.query_one("#weekly-header", Static)
+        weekly_header.set_class(self.weekly_mode, "visible")
+        if self.weekly_mode:
+            weekly_header.update(self._format_week_range())
 
         rendered = Text()
-        if not self.current_todos:
+        if self.weekly_mode:
+            if not self.current_weekly_items:
+                rendered.append("No weekly tasks yet.", style="dim")
+            else:
+                for index, task in enumerate(self.current_weekly_items):
+                    checkbox = "[x]" if task.get("done") else "[ ]"
+                    line = Text(f"{index + 1}. {checkbox} {task.get('name', '')}")
+                    if task.get("done"):
+                        line.stylize("dim strike")
+                    if self.weekly_insert_mode and index == self.weekly_index:
+                        line.stylize("bold black on #d8d8d8")
+                    rendered.append(line)
+                    if index < len(self.current_weekly_items) - 1:
+                        rendered.append("\n")
+        elif not self.current_todos:
             if category:
                 rendered.append("No to-dos in this category.", style="dim")
         else:
@@ -253,13 +339,40 @@ class TodoApp(App[None]):
                 if index < len(self.current_todos) - 1:
                     rendered.append("\n")
         self.query_one("#todo-lines", Static).update(rendered)
-        self.query_one("#help", Static).update(
-            "1-9 categories  i select  Esc quit"
-            if not self.select_mode
-            else "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
-        )
-        for index, category in enumerate(self.query(".category-tab")):
-            category.set_class(index == self.category_index, "active")
+        self.query_one("#no-categories", Static).set_class(not self.categories, "visible")
+        category_tabs = self.query(".category-tab")
+        for index, category_tab in enumerate(category_tabs):
+            visible = index < len(self.categories)
+            category_tab.update(
+                Text(f"{index + 1}. {self.categories[index].get('categoryName', 'Category')}")
+                if visible
+                else ""
+            )
+            category_tab.set_class(not visible, "hidden")
+            category_tab.set_class(visible and index == self.category_index, "active")
+        if self.weekly_mode:
+            help_text = (
+                "j/k move  a add  Space toggle  d remove  e dates  r reorder  Esc normal"
+                if self.weekly_insert_mode
+                else "i insert  Esc back to to-dos"
+            )
+        else:
+            help_text = (
+                "1-9 switch  a add  d delete  r reorder categories  i select  0 weekly  Esc quit"
+                if not self.select_mode
+                else "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
+            )
+        self.query_one("#help", Static).update(help_text)
+
+    def _format_week_range(self) -> str:
+        try:
+            start = date.fromisoformat(self.weekly_data["start_date"])
+            end = date.fromisoformat(self.weekly_data["end_date"])
+        except (KeyError, TypeError, ValueError):
+            return "Weekly tasks"
+        start_month = MONTH_ABBREVIATIONS[start.month - 1]
+        end_month = MONTH_ABBREVIATIONS[end.month - 1]
+        return f"{start.day} {start_month} - {end.day} {end_month}"
 
     def _set_message(self, message: str) -> None:
         self.message = message
@@ -269,14 +382,31 @@ class TodoApp(App[None]):
     def _report_error(self, message: str) -> None:
         self._set_message(f"Error: {message}")
 
+    def action_enter_weekly(self) -> None:
+        if self.select_mode or self.weekly_mode:
+            return
+        self.weekly_mode = True
+        self.weekly_insert_mode = False
+        self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+        self.weekly_index = min(self.weekly_index, max(0, len(self.current_weekly_items) - 1))
+        self.refresh_view()
+
     def action_select_category(self, index: int) -> None:
-        if not self.select_mode and 0 <= index < len(self.categories):
+        if not self.weekly_mode and not self.select_mode and 0 <= index < len(self.categories):
             self.category_index = index
             self.todo_index = 0
             self._set_message("")
             self.refresh_view()
 
     def action_enter_select(self) -> None:
+        if self.weekly_mode:
+            self.weekly_insert_mode = True
+            self.weekly_index = min(
+                self.weekly_index, max(0, len(self.current_weekly_items) - 1)
+            )
+            self._set_message("Insert mode")
+            self.refresh_view()
+            return
         if self.current_category:
             self.select_mode = True
             self.todo_index = min(self.todo_index, max(0, len(self.current_todos) - 1))
@@ -284,6 +414,15 @@ class TodoApp(App[None]):
             self.refresh_view()
 
     def action_back(self) -> None:
+        if self.weekly_mode:
+            if self.weekly_insert_mode:
+                self.weekly_insert_mode = False
+                self._set_message("Normal mode")
+            else:
+                self.weekly_mode = False
+                self._set_message("Back to to-dos")
+            self.refresh_view()
+            return
         if self.select_mode:
             self.select_mode = False
             self._set_message("Normal mode")
@@ -292,17 +431,42 @@ class TodoApp(App[None]):
             self.exit()
 
     def action_move_down(self) -> None:
+        if self.weekly_mode and self.weekly_insert_mode and self.current_weekly_items:
+            self.weekly_index = min(len(self.current_weekly_items) - 1, self.weekly_index + 1)
+            self.refresh_view()
+            return
         if self.select_mode and self.current_todos:
             self.todo_index = min(len(self.current_todos) - 1, self.todo_index + 1)
             self.refresh_view()
 
     def action_move_up(self) -> None:
+        if self.weekly_mode and self.weekly_insert_mode and self.current_weekly_items:
+            self.weekly_index = max(0, self.weekly_index - 1)
+            self.refresh_view()
+            return
         if self.select_mode and self.current_todos:
             self.todo_index = max(0, self.todo_index - 1)
             self.refresh_view()
 
     def action_add_todo(self) -> None:
-        if not self.select_mode or not self.current_category:
+        if self.weekly_mode:
+            if not self.weekly_insert_mode:
+                return
+            self.push_screen(
+                FormDialog("Add weekly task", [("Name", "", False)]),
+                self._added_weekly_task,
+            )
+            return
+        if not self.select_mode:
+            if len(self.categories) >= 9:
+                self._set_message("Maximum of 9 categories reached")
+                return
+            self.push_screen(
+                FormDialog("Add a category", [("Name", "", False)]),
+                self._added_category,
+            )
+            return
+        if not self.current_category:
             return
         self.push_screen(
             FormDialog(
@@ -311,6 +475,23 @@ class TodoApp(App[None]):
             ),
             self._added_todo,
         )
+
+    def _added_category(self, values: list[str] | None) -> None:
+        if values is None:
+            return
+        name = values[0].strip()
+        if not name:
+            self._set_message("Category name cannot be empty")
+            return
+        self.message = ""
+        if add_category(name, self.path, self._report_error):
+            self._load_data()
+            self.category_index = max(0, len(self.categories) - 1)
+            self.todo_index = 0
+            self._set_message("Category added")
+        else:
+            self._set_message(self.message or "Add category failed")
+        self.refresh_view()
 
     def _added_todo(self, values: list[str] | None) -> None:
         if values is None:
@@ -333,7 +514,7 @@ class TodoApp(App[None]):
 
     def action_view_todo(self) -> None:
         todo = self.current_todo
-        if not self.select_mode or not todo:
+        if self.weekly_mode or not self.select_mode or not todo:
             return
         title = str(todo.get("title", ""))
         details = str(todo.get("details") or "(No details)")
@@ -342,8 +523,42 @@ class TodoApp(App[None]):
         )
 
     def action_delete_todo(self) -> None:
+        if self.weekly_mode:
+            task = self.current_weekly_task
+            if not self.weekly_insert_mode or not task:
+                return
+            self.push_screen(
+                InfoDialog(
+                    f"Delete {task['name']}?",
+                    "Are you sure you want to delete this weekly task?",
+                    confirm_label="Delete",
+                    destructive=True,
+                ),
+                lambda confirmed: self._deleted_weekly_task(confirmed, task),
+            )
+            return
+        if not self.select_mode:
+            category = self.current_category
+            if not category:
+                return
+            todo_count = len(category.get("toDos", []))
+            detail = (
+                f" Its {todo_count} to-dos will also be deleted."
+                if todo_count
+                else ""
+            )
+            self.push_screen(
+                InfoDialog(
+                    f"Delete {category.get('categoryName', 'category')}?",
+                    "Are you sure you want to delete this category?" + detail,
+                    confirm_label="Delete",
+                    destructive=True,
+                ),
+                lambda confirmed: self._deleted_category(confirmed, category),
+            )
+            return
         todo, category = self.current_todo, self.current_category
-        if not self.select_mode or not todo or not category:
+        if not todo or not category:
             return
         title = str(todo.get("title", ""))
         self.push_screen(
@@ -355,6 +570,22 @@ class TodoApp(App[None]):
             ),
             lambda confirmed: self._deleted_todo(confirmed, category, todo),
         )
+
+    def _deleted_category(
+        self, confirmed: bool | None, category: dict[str, Any]
+    ) -> None:
+        if not confirmed:
+            return
+        self.message = ""
+        old_index = self.category_index
+        if delete_category(category["id"], self.path, self._report_error):
+            self._load_data()
+            self.category_index = min(old_index, max(0, len(self.categories) - 1))
+            self.todo_index = 0
+            self._set_message("Category deleted")
+        else:
+            self._set_message(self.message or "Delete category failed")
+        self.refresh_view()
 
     def _deleted_todo(
         self, confirmed: bool | None, category: dict[str, Any], todo: dict[str, Any]
@@ -370,6 +601,20 @@ class TodoApp(App[None]):
             self._set_message(self.message or "Delete failed")
 
     def action_edit_todo(self) -> None:
+        if self.weekly_mode:
+            if not self.weekly_insert_mode:
+                return
+            self.push_screen(
+                FormDialog(
+                    "Edit date range",
+                    [
+                        ("Start date (YYYY-MM-DD)", self.weekly_data["start_date"], False),
+                        ("End date (YYYY-MM-DD)", self.weekly_data["end_date"], False),
+                    ],
+                ),
+                self._edited_week_dates,
+            )
+            return
         todo = self.current_todo
         if not self.select_mode or not todo:
             return
@@ -404,8 +649,44 @@ class TodoApp(App[None]):
         self.refresh_view()
 
     def action_rearrange_todo(self) -> None:
+        if self.weekly_mode:
+            task = self.current_weekly_task
+            if not self.weekly_insert_mode or not task:
+                return
+            self.push_screen(
+                FormDialog(
+                    "Reorder weekly task",
+                    [
+                        (
+                            f"Position (1-{len(self.current_weekly_items)})",
+                            str(self.weekly_index + 1),
+                            False,
+                        )
+                    ],
+                ),
+                lambda values: self._rearranged_weekly_task(values, task),
+            )
+            return
+        if not self.select_mode:
+            category = self.current_category
+            if not category:
+                return
+            self.push_screen(
+                FormDialog(
+                    "Reorder category",
+                    [
+                        (
+                            f"Position (1-{len(self.categories)})",
+                            str(self.category_index + 1),
+                            False,
+                        )
+                    ],
+                ),
+                self._rearranged_category,
+            )
+            return
         todo = self.current_todo
-        if not self.select_mode or not todo:
+        if not todo:
             return
         self.push_screen(
             FormDialog(
@@ -414,6 +695,27 @@ class TodoApp(App[None]):
             ),
             lambda values: self._rearranged_todo(values, todo),
         )
+
+    def _rearranged_category(self, values: list[str] | None) -> None:
+        if values is None:
+            return
+        try:
+            place = int(values[0])
+        except ValueError:
+            self._set_message("Enter a whole number")
+            return
+        category = self.current_category
+        self.message = ""
+        if category and rearrange_categories(
+            self.path, category["id"], place, self._report_error
+        ):
+            self._load_data()
+            self.category_index = place - 1
+            self.todo_index = 0
+            self._set_message("Category moved")
+        else:
+            self._set_message(self.message or "Reorder failed")
+        self.refresh_view()
 
     def _rearranged_todo(self, values: list[str] | None, todo: dict[str, Any]) -> None:
         if values is None:
@@ -432,6 +734,78 @@ class TodoApp(App[None]):
             self._set_message("To-do moved")
         else:
             self._set_message(self.message or "Reorder failed")
+        self.refresh_view()
+
+    def _rearranged_weekly_task(
+        self, values: list[str] | None, task: dict[str, Any]
+    ) -> None:
+        if values is None:
+            return
+        try:
+            place = int(values[0])
+        except ValueError:
+            self._set_message("Enter a whole number")
+            return
+        self.message = ""
+        if rearrange_weekly_task(
+            self.weekly_path, task["id"], place, self._report_error
+        ):
+            self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+            self.weekly_index = place - 1
+            self._set_message("Weekly task moved")
+        else:
+            self._set_message(self.message or "Reorder failed")
+        self.refresh_view()
+
+    def action_toggle_weekly_task(self) -> None:
+        task = self.current_weekly_task
+        if not self.weekly_mode or not self.weekly_insert_mode or not task:
+            return
+        self.message = ""
+        if toggle_weekly_task(self.weekly_path, task["id"], self._report_error):
+            self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+            self._set_message("Task marked done" if task.get("done") is False else "Task marked not done")
+        else:
+            self._set_message(self.message or "Could not update task")
+        self.refresh_view()
+
+    def _added_weekly_task(self, values: list[str] | None) -> None:
+        if values is None:
+            return
+        self.message = ""
+        if add_weekly_task(self.weekly_path, values[0], self._report_error):
+            self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+            self.weekly_index = max(0, len(self.current_weekly_items) - 1)
+            self._set_message("Weekly task added")
+        else:
+            self._set_message(self.message or "Add failed")
+        self.refresh_view()
+
+    def _deleted_weekly_task(
+        self, confirmed: bool | None, task: dict[str, Any]
+    ) -> None:
+        if not confirmed:
+            return
+        self.message = ""
+        if delete_weekly_task(self.weekly_path, task["id"], self._report_error):
+            self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+            self.weekly_index = min(self.weekly_index, max(0, len(self.current_weekly_items) - 1))
+            self._set_message("Weekly task removed")
+        else:
+            self._set_message(self.message or "Delete failed")
+        self.refresh_view()
+
+    def _edited_week_dates(self, values: list[str] | None) -> None:
+        if values is None:
+            return
+        self.message = ""
+        if set_weekly_dates(
+            self.weekly_path, values[0].strip(), values[1].strip(), self._report_error
+        ):
+            self.weekly_data = load_weekly_tasks(self.weekly_path, self._report_error)
+            self._set_message("Date range saved")
+        else:
+            self._set_message(self.message or "Date range was not saved")
         self.refresh_view()
 
 
