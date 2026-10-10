@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sys
 from datetime import date
+from fractions import Fraction
 from pathlib import Path
 from typing import Any
 
@@ -12,9 +13,12 @@ from textual import on
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
+from textual.geometry import NULL_OFFSET, Region, Size
+from textual.layout import Layout, WidgetPlacement
 from textual.screen import ModalScreen
 from textual.theme import Theme
 from textual.widgets import Input, Label, Static, TextArea
+from textual.widget import Widget
 from rich.text import Text
 
 
@@ -49,6 +53,81 @@ MONTH_ABBREVIATIONS = (
 )
 
 
+class CategoryWrapLayout(Layout):
+    """Place category tabs in a natural left-to-right flow that wraps by row."""
+
+    name = "category-wrap"
+
+    def __init__(self, horizontal_gap: int = 1, row_gap: int = 1) -> None:
+        self.horizontal_gap = horizontal_gap
+        self.row_gap = row_gap
+
+    def arrange(
+        self,
+        parent: Widget,
+        children: list[Widget],
+        size: Size,
+        greedy: bool = True,
+    ) -> list[WidgetPlacement]:
+        parent.pre_layout(self)
+        viewport = parent.app.viewport_size
+        placements: list[WidgetPlacement] = []
+        x = y = row_height = 0
+        row_has_children = False
+
+        for child in children:
+            box = child._get_box_model(
+                size,
+                viewport,
+                Fraction(size.width),
+                Fraction(size.height),
+                constrain_width=True,
+                greedy=greedy,
+            )
+            width, height = int(box.width), int(box.height)
+            margin = box.margin
+            gap = self.horizontal_gap if row_has_children else 0
+            outer_width = margin.left + width + margin.right
+
+            if row_has_children and x + gap + outer_width > size.width:
+                x = 0
+                y += row_height + self.row_gap
+                row_height = 0
+                row_has_children = False
+                gap = 0
+
+            x += gap + margin.left
+            placements.append(
+                WidgetPlacement(
+                    Region(x, y + margin.top, width, height),
+                    NULL_OFFSET,
+                    margin,
+                    child,
+                )
+            )
+            x += width + margin.right
+            row_height = max(row_height, margin.top + height + margin.bottom)
+            row_has_children = True
+
+        return placements
+
+
+class CategoryTabBar(Widget):
+    """A category tab container using a wrapping flow layout."""
+
+    DEFAULT_CSS = """
+    CategoryTabBar {
+        width: 1fr;
+        height: auto;
+        overflow: hidden hidden;
+    }
+    """
+
+    def __init__(self, *children: Widget, **kwargs: Any) -> None:
+        super().__init__(*children, **kwargs)
+        self._default_layout = CategoryWrapLayout()
+
+
 def _category_bindings() -> list[Binding]:
     return [
         Binding(key, f"select_category({index})", show=False)
@@ -69,9 +148,9 @@ class TodoApp(App[None]):
         height: 1fr;
     }
     #categories {
-        height: 2;
+        height: auto;
         padding: 0 1;
-        margin-bottom: 1;
+        margin-bottom: 2;
         overflow-x: hidden;
     }
     #categories.hidden {
@@ -101,8 +180,7 @@ class TodoApp(App[None]):
     .category-tab {
         height: 1;
         width: auto;
-        margin-right: 1;
-        min-width: 0;
+        max-width: 100%;
         padding: 0 1;
         background: #303030;
         color: #b8b8b8;
@@ -274,7 +352,7 @@ class TodoApp(App[None]):
 
     def compose(self) -> ComposeResult:
         with Vertical(id="app-frame"):
-            with Horizontal(id="categories"):
+            with CategoryTabBar(id="categories"):
                 yield Static("No categories", id="no-categories", classes="visible")
                 for index in range(9):
                     yield Static("", id=f"category-{index}", classes="category-tab hidden")
@@ -340,11 +418,15 @@ class TodoApp(App[None]):
                     rendered.append("\n")
         self.query_one("#todo-lines", Static).update(rendered)
         self.query_one("#no-categories", Static).set_class(not self.categories, "visible")
+        category_labels = [
+            f"{index + 1}. {category.get('categoryName') or 'Category'}"
+            for index, category in enumerate(self.categories)
+        ]
         category_tabs = self.query(".category-tab")
         for index, category_tab in enumerate(category_tabs):
             visible = index < len(self.categories)
             category_tab.update(
-                Text(f"{index + 1}. {self.categories[index].get('categoryName', 'Category')}")
+                Text(category_labels[index])
                 if visible
                 else ""
             )
