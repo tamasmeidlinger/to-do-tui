@@ -12,3 +12,4 @@ wheels/
 # JSONS containing data except empty backup and test
 data/to-do.json
 data/weekly-tasks.json
+data/todo-on-day-x.json

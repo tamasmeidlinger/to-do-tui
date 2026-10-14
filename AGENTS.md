@@ -57,6 +57,16 @@
   - in normal mode you should not be able to select the items
   - should be able to rearrange the items the same way as in to-dos
 
+- New todo-on-day-x section
+  - Similar concept like weekly tasks which is already implemented
+  - Top part has a datepicker where you can choose ONE date and is display like 15 Oct
+  - Then exactly to todos you can add items that are numbered, etc. Same as todos but has date up top like weekly tasks
+  - Needs a new json file named "todo-on-day-x.json" to store stuff
+  - needs the relevant function in utils/todo-on-day-x/
+  - Basically same functionality as todos but with a date up top
+  - doesnt show up top at todos but only a shortcut in the footer
+  - the shortcut should be control + j to open, other than that same navigation
+
 ## Others
 
 - Prefer built-in libraries

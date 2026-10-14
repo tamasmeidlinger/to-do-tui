@@ -27,6 +27,15 @@ its checkbox, `d` to remove it, `e` to edit the start and end dates as
 to weekly normal mode, then returns to the to-do categories. Changing the date
 range leaves task completion states as they are.
 
+Press `Ctrl+J` from normal to-do mode to open the date-specific to-do list in
+`data/todo-on-day-x.json`. Its selected date is stored as `YYYY-MM-DD` and
+displayed without the year. In normal day mode, `e` opens a keyboard-operated
+calendar: `h`/`l` move by a day, `k`/`j` by a week, and `H`/`L` by a month.
+`S` selects today, `Enter` chooses the highlighted date, and `Esc` cancels.
+Press `i` to select items, then use `a`, `v`, `d`, `e`, or `r` to add, view,
+delete, edit, or reorder them. `Esc` returns to normal mode, then back to the
+category to-dos.
+
 In form modals, `Ctrl+N` advances through the fields, `Ctrl+L` returns to the
 previous field, and `Ctrl+S` saves after all fields have been visited. Details
 support multiple lines; titles are single-line. `Esc` cancels a modal.
