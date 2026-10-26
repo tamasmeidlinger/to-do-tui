@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import calendar
 import json
+import os
 import sys
 from datetime import date
 from fractions import Fraction
@@ -16,6 +17,7 @@ from textual.binding import Binding
 from textual.containers import Horizontal, Vertical, VerticalScroll
 from textual.geometry import NULL_OFFSET, Region, Size
 from textual.layout import Layout, WidgetPlacement
+from textual.reactive import Reactive
 from textual.screen import ModalScreen
 from textual.theme import Theme
 from textual.widgets import Input, Label, Static, TextArea
@@ -160,10 +162,11 @@ class TodoApp(App[None]):
     """Category-based to-do TUI with normal and select modes."""
 
     TITLE = "To-do"
+    theme = Reactive("textual-dark")
     CSS = """
     Screen {
-        background: #181818;
-        color: #d6d6d6;
+        background: $background;
+        color: $foreground;
     }
     #app-frame {
         height: 1fr;
@@ -181,7 +184,7 @@ class TodoApp(App[None]):
         display: none;
         height: 1;
         padding: 0 1;
-        color: #929292;
+        color: $secondary;
     }
     #no-categories.visible {
         display: block;
@@ -191,7 +194,7 @@ class TodoApp(App[None]):
         height: 2;
         padding: 0 2;
         margin-bottom: 1;
-        color: #e0e0e0;
+        color: $foreground;
         text-style: bold;
         content-align: left middle;
     }
@@ -203,16 +206,16 @@ class TodoApp(App[None]):
         width: auto;
         max-width: 100%;
         padding: 0 1;
-        background: #303030;
-        color: #b8b8b8;
+        background: $surface;
+        color: $foreground;
         content-align: left middle;
     }
     .category-tab.hidden {
         display: none;
     }
     .category-tab.active {
-        background: #d8d8d8;
-        color: #181818;
+        background: $primary;
+        color: $background;
         text-style: bold;
     }
     #status-bar {
@@ -225,8 +228,8 @@ class TodoApp(App[None]):
         height: 1;
         padding: 0 1;
         margin-right: 2;
-        background: #303030;
-        color: #e0e0e0;
+        background: $panel;
+        color: $foreground;
         text-style: bold;
         content-align: left middle;
     }
@@ -234,18 +237,30 @@ class TodoApp(App[None]):
         width: 1fr;
         height: 2;
         padding: 0 1;
-        color: #929292;
+        color: $foreground;
+    }
+    #status.error {
+        color: $error;
+    }
+    #status.warning {
+        color: $warning;
+    }
+    #status.success {
+        color: $success;
+    }
+    #status.info {
+        color: $secondary;
     }
     #todo-panel {
         height: 1fr;
         margin: 0 2 1 2;
         padding: 0 1;
-        border: round #777777;
-        background: #202020;
+        border: round $accent;
+        background: $background;
     }
     #todo-heading {
         height: 1;
-        color: #e0e0e0;
+        color: $foreground;
         text-style: bold;
     }
     #todo-scroll {
@@ -257,23 +272,24 @@ class TodoApp(App[None]):
     #help {
         height: 2;
         padding: 0 2;
-        color: #929292;
+        color: $foreground;
     }
     Input {
-        border: round #686868;
-        background: #202020;
-        color: #d6d6d6;
+        border: round $panel;
+        background: $surface;
+        color: $foreground;
     }
     Input:focus {
-        border: round #d0d0d0;
+        border: round $accent;
+        background-tint: $background 0%;
     }
     TextArea {
-        border: round #686868;
-        background: #202020;
-        color: #d6d6d6;
+        border: round $panel;
+        background: $surface;
+        color: $foreground;
     }
     TextArea:focus {
-        border: round #d0d0d0;
+        border: round $accent;
     }
     """
 
@@ -298,25 +314,29 @@ class TodoApp(App[None]):
     ]
 
     def __init__(self, path: str | Path | None = None):
+        requested_theme = os.environ.get("TEXTUAL_THEME")
         super().__init__()
         self.register_theme(
             Theme(
-                name="todo-gray",
-                primary="#b0b0b0",
-                secondary="#858585",
-                warning="#c0c0c0",
-                error="#d0d0d0",
-                success="#a0a0a0",
-                accent="#d8d8d8",
-                foreground="#d6d6d6",
-                background="#181818",
-                surface="#242424",
-                panel="#303030",
-                boost="#404040",
+                name="everforest",
+                primary="#b8d893",
+                secondary="#83c092",
+                warning="#dbbc7f",
+                error="#e67e80",
+                success="#a7c080",
+                accent="#a7c080",
+                foreground="#d3c6aa",
+                background="#232a2e",
+                surface="#2d353b",
+                panel="#343f44",
+                boost="#3d484d",
                 dark=True,
             )
         )
-        self.theme = "todo-gray"
+        if requested_theme:
+            selected_theme = self.get_theme(requested_theme)
+            if selected_theme is not None:
+                self.theme = selected_theme.name
         self.path = (
             Path(path) if path is not None else Path.cwd() / "data" / "to-do-test.json"
         )
@@ -433,7 +453,7 @@ class TodoApp(App[None]):
         else:
             mode_label = "SELECT" if self.select_mode else "NORMAL"
         self.query_one("#mode", Static).update(mode_label)
-        self.query_one("#status", Static).update(Text(self.message))
+        self._update_status()
         section_mode = self.weekly_mode or self.day_todos_mode
         self.query_one("#categories").set_class(section_mode, "hidden")
         section_header = self.query_one("#section-header", Static)
@@ -454,7 +474,7 @@ class TodoApp(App[None]):
                     if task.get("done"):
                         line.stylize("dim strike")
                     if self.weekly_insert_mode and index == self.weekly_index:
-                        line.stylize("bold black on #d8d8d8")
+                        line.stylize("bold reverse")
                     rendered.append(line)
                     if index < len(self.current_weekly_items) - 1:
                         rendered.append("\n")
@@ -466,7 +486,7 @@ class TodoApp(App[None]):
                     title = str(todo.get("title", "")).replace("\n", " ")
                     line = Text(f"{index + 1}. {title}")
                     if self.day_select_mode and index == self.day_todo_index:
-                        line.stylize("bold black on #d8d8d8")
+                        line.stylize("bold reverse")
                     rendered.append(line)
                     if index < len(self.current_day_todos) - 1:
                         rendered.append("\n")
@@ -478,7 +498,7 @@ class TodoApp(App[None]):
                 title = str(todo.get("title", "")).replace("\n", " ")
                 line = Text(f"{index + 1}. {title}")
                 if self.select_mode and index == self.todo_index:
-                    line.stylize("bold black on #d8d8d8")
+                    line.stylize("bold reverse")
                 rendered.append(line)
                 if index < len(self.current_todos) - 1:
                     rendered.append("\n")
@@ -497,23 +517,64 @@ class TodoApp(App[None]):
             category_tab.set_class(not visible, "hidden")
             category_tab.set_class(visible and index == self.category_index, "active")
         if self.weekly_mode:
-            help_text = (
-                "j/k move  a add  Space toggle  d remove  e dates  r reorder  Esc normal"
+            help_items = (
+                [
+                    ("j/k", "move"),
+                    ("a", "add"),
+                    ("Space", "toggle"),
+                    ("d", "remove"),
+                    ("e", "dates"),
+                    ("r", "reorder"),
+                    ("Esc", "normal mode"),
+                ]
                 if self.weekly_insert_mode
-                else "i insert  Esc back to to-dos"
+                else [("i", "insert"), ("Esc", "back to to-dos")]
             )
         elif self.day_todos_mode:
-            help_text = (
-                "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
+            help_items = (
+                [
+                    ("j/k", "move"),
+                    ("a", "add"),
+                    ("v", "view"),
+                    ("d", "delete"),
+                    ("e", "edit"),
+                    ("r", "reorder"),
+                    ("Esc", "back"),
+                ]
                 if self.day_select_mode
-                else "e choose date  i select  Esc back to to-dos"
+                else [
+                    ("e", "choose date"),
+                    ("i", "select"),
+                    ("Esc", "back to to-dos"),
+                ]
             )
+        elif self.select_mode:
+            help_items = [
+                ("j/k", "move"),
+                ("a", "add"),
+                ("v", "view"),
+                ("d", "delete"),
+                ("e", "edit"),
+                ("r", "reorder"),
+                ("Esc", "back"),
+            ]
         else:
-            help_text = (
-                "1-9 switch  a add  d delete  r reorder categories  i select  0 weekly  Ctrl+J day  Esc quit"
-                if not self.select_mode
-                else "j/k move  a add  v view  d delete  e edit  r reorder  Esc back"
-            )
+            help_items = [
+                ("1-9", "switch"),
+                ("a", "add category"),
+                ("d", "delete category"),
+                ("r", "reorder categories"),
+                ("i", "select"),
+                ("0", "weekly"),
+                ("Ctrl+J", "day to-dos"),
+                ("Esc", "quit"),
+            ]
+        help_text = Text()
+        for index, (shortcut, description) in enumerate(help_items):
+            if index:
+                help_text.append("  ·  ", style="dim")
+            help_text.append(shortcut, style="bold")
+            help_text.append(f" {description}")
         self.query_one("#help", Static).update(help_text)
 
     def _format_week_range(self) -> str:
@@ -536,7 +597,35 @@ class TodoApp(App[None]):
     def _set_message(self, message: str) -> None:
         self.message = message
         if self.is_mounted:
-            self.query_one("#status", Static).update(Text(message))
+            self._update_status()
+
+    def _update_status(self) -> None:
+        status = self.query_one("#status", Static)
+        status.update(self.message)
+        level = self._status_level()
+        for name in ("error", "warning", "success", "info"):
+            status.set_class(level == name, name)
+
+    def _status_level(self) -> str:
+        message = self.message
+        if not message:
+            return "info"
+
+        normalized = message.lower()
+        if (
+            message.startswith("Error:")
+            or message.startswith("Could not")
+            or "failed" in normalized
+            or "not saved" in normalized
+        ):
+            return "error"
+        elif normalized.startswith(
+            ("maximum", "title cannot", "category name cannot", "enter a whole number")
+        ):
+            return "warning"
+        elif normalized.endswith((" added", " deleted", " saved", " moved")):
+            return "success"
+        return "info"
 
     def _report_error(self, message: str) -> None:
         self._set_message(f"Error: {message}")
@@ -1201,13 +1290,13 @@ class DatePickerDialog(ModalScreen[str | None]):
     CSS = """
     DatePickerDialog {
         align: center middle;
-        background: #101010 85%;
+        background: $background 85%;
     }
     #date-dialog {
         width: 46;
         height: auto;
-        border: round #777777;
-        background: #242424;
+        border: round $accent;
+        background: $background;
         padding: 1 2;
     }
     #date-title {
@@ -1227,7 +1316,7 @@ class DatePickerDialog(ModalScreen[str | None]):
     #date-help {
         height: 3;
         margin-top: 1;
-        color: #a0a0a0;
+        color: $secondary;
         content-align: center middle;
     }
     """
@@ -1273,8 +1362,7 @@ class DatePickerDialog(ModalScreen[str | None]):
                 label = f"{day_number:2} "
                 style = None
                 if current == self.selected_date:
-                    label = f"{day_number:2} "
-                    style = "bold black on #d8d8d8"
+                    style = "bold reverse"
                 elif current == today:
                     style = "underline"
                 calendar_text.append(label, style=style)
@@ -1335,21 +1423,21 @@ class InfoDialog(ModalScreen[bool | None]):
     CSS = """
     InfoDialog {
         align: center middle;
-        background: #101010 85%;
+        background: $background 85%;
     }
     #dialog {
         width: 85%;
         height: 75%;
         max-width: 110;
-        border: round #777777;
-        background: #242424;
+        border: round $accent;
+        background: $background;
         padding: 1 2;
     }
     .dialog-title {
         height: auto;
         margin-bottom: 1;
         text-style: bold;
-        color: #e0e0e0;
+        color: $foreground;
     }
     #dialog-message {
         height: auto;
@@ -1364,7 +1452,7 @@ class InfoDialog(ModalScreen[bool | None]):
     #dialog-help {
         height: 2;
         padding-top: 1;
-        color: #a0a0a0;
+        color: $secondary;
     }
     """
 
@@ -1420,21 +1508,21 @@ class FormDialog(ModalScreen[list[str] | None]):
     CSS = """
     FormDialog {
         align: center middle;
-        background: #101010 85%;
+        background: $background 85%;
     }
     #dialog {
         width: 85%;
         height: 75%;
         max-width: 110;
-        border: round #777777;
-        background: #242424;
+        border: round $accent;
+        background: $background;
         padding: 1 2;
     }
     .dialog-title {
         height: auto;
         margin-bottom: 1;
         text-style: bold;
-        color: #e0e0e0;
+        color: $foreground;
     }
     .field-label {
         height: 1;
@@ -1442,15 +1530,17 @@ class FormDialog(ModalScreen[list[str] | None]):
     }
     .field-input {
         height: 3;
+        background: $surface;
     }
     .field-text-area {
         height: 1fr;
         min-height: 5;
+        background: $surface;
     }
     #instructions {
         height: 2;
         padding-top: 1;
-        color: #a0a0a0;
+        color: $secondary;
     }
     """
 

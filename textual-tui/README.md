@@ -6,7 +6,12 @@ Run from the project root:
 uv run python textual-tui
 ```
 
-The interface is keyboard-only and uses a grayscale theme.
+The interface is keyboard-only and follows the active Textual theme. Set
+`TEXTUAL_THEME` before launch to choose one, for example:
+
+```sh
+TEXTUAL_THEME=everforest uv run python textual-tui
+```
 
 In normal mode, use `1`–`9` to switch categories, `a` to add a category, `d`
 to delete the selected category, and `r` to move it to a numbered position.
