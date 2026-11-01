@@ -11,7 +11,11 @@ The interface is keyboard-only and follows the active Textual theme. Set
 
 ```sh
 TEXTUAL_THEME=everforest uv run python textual-tui
+TEXTUAL_THEME=tamasm uv run python textual-tui
 ```
+
+The `tamasm` theme uses a Catppuccin Mocha palette with a `#292c35`
+background and `#84a8c6` highlights.
 
 In normal mode, use `1`–`9` to switch categories, `a` to add a category, `d`
 to delete the selected category, and `r` to move it to a numbered position.

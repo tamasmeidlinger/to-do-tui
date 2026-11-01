@@ -333,6 +333,23 @@ class TodoApp(App[None]):
                 dark=True,
             )
         )
+        self.register_theme(
+            Theme(
+                name="tamasm",
+                primary="#84a8c6",
+                secondary="#b4befe",
+                warning="#f9e2af",
+                error="#f38ba8",
+                success="#a6e3a1",
+                accent="#84a8c6",
+                foreground="#cdd6f4",
+                background="#292c35",
+                surface="#313244",
+                panel="#45475a",
+                boost="#585b70",
+                dark=True,
+            )
+        )
         if requested_theme:
             selected_theme = self.get_theme(requested_theme)
             if selected_theme is not None:
