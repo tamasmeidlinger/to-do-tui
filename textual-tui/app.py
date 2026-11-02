@@ -301,9 +301,9 @@ class TodoApp(App[None]):
         Binding("enter", "enter_select", show=False),
         Binding("escape", "back", "Back / quit"),
         Binding("q", "back", show=False),
-        Binding("j", "move_down", show=False),
+        Binding("j", "previous_category", show=False),
         Binding("down", "move_down", show=False),
-        Binding("k", "move_up", show=False),
+        Binding("k", "next_category", show=False),
         Binding("up", "move_up", show=False),
         Binding("a", "add_todo", "Add", show=False),
         Binding("v", "view_todo", "View", show=False),
@@ -578,6 +578,7 @@ class TodoApp(App[None]):
         else:
             help_items = [
                 ("1-9", "switch"),
+                ("j/k", "previous/next category"),
                 ("a", "add category"),
                 ("d", "delete category"),
                 ("r", "reorder categories"),
@@ -759,6 +760,26 @@ class TodoApp(App[None]):
         if self.select_mode and self.current_todos:
             self.todo_index = max(0, self.todo_index - 1)
             self.refresh_view()
+
+    def action_previous_category(self) -> None:
+        if not self.weekly_mode and not self.day_todos_mode and not self.select_mode:
+            if self.categories:
+                self.category_index = (self.category_index - 1) % len(self.categories)
+                self.todo_index = 0
+                self._set_message("")
+                self.refresh_view()
+            return
+        self.action_move_down()
+
+    def action_next_category(self) -> None:
+        if not self.weekly_mode and not self.day_todos_mode and not self.select_mode:
+            if self.categories:
+                self.category_index = (self.category_index + 1) % len(self.categories)
+                self.todo_index = 0
+                self._set_message("")
+                self.refresh_view()
+            return
+        self.action_move_up()
 
     def action_add_todo(self) -> None:
         if self.weekly_mode:
