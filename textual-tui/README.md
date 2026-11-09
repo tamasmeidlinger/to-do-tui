@@ -46,6 +46,6 @@ Press `i` to select items, then use `a`, `v`, `d`, `e`, or `r` to add, view,
 delete, edit, or reorder them. `Esc` returns to normal mode, then back to the
 category to-dos.
 
-In form modals, `Ctrl+N` advances through the fields, `Ctrl+L` returns to the
-previous field, and `Ctrl+S` saves after all fields have been visited. Details
-support multiple lines; titles are single-line. `Esc` cancels a modal.
+In form modals, use `Tab` to move between fields and `Ctrl+S` to save at any
+point. Details support multiple lines; titles are single-line. `Esc` cancels a
+modal.

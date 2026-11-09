@@ -1535,12 +1535,10 @@ class InfoDialog(ModalScreen[bool | None]):
 
 
 class FormDialog(ModalScreen[list[str] | None]):
-    """Edit one or more fields, then explicitly save with Ctrl+S."""
+    """Edit fields with the normal Tab navigation, then save with Ctrl+S."""
 
     BINDINGS = [
         Binding("escape", "cancel", show=False, priority=True),
-        Binding("ctrl+n", "next_field", show=False, priority=True),
-        Binding("ctrl+l", "previous_field", show=False, priority=True),
         Binding("ctrl+s", "save", show=False, priority=True),
     ]
     CSS = """
@@ -1586,8 +1584,6 @@ class FormDialog(ModalScreen[list[str] | None]):
         super().__init__()
         self.title_text = title
         self.fields = fields
-        self.field_stage = 0
-        self.ready_to_save = False
 
     def compose(self) -> ComposeResult:
         with Vertical(id="dialog"):
@@ -1601,43 +1597,14 @@ class FormDialog(ModalScreen[list[str] | None]):
                 else:
                     yield Input(value, id=f"field-{index}", classes="field-input")
             yield Static(
-                "Ctrl+N: next field  ·  Ctrl+L: previous field  ·  Esc: cancel",
+                "Tab: next field  ·  Ctrl+S: save  ·  Esc: cancel",
                 id="instructions",
             )
 
     def on_mount(self) -> None:
         self.query_one("#field-0").focus()
 
-    def action_next_field(self) -> None:
-        if self.ready_to_save:
-            return
-        if self.field_stage + 1 < len(self.fields):
-            self.field_stage += 1
-            self.query_one(f"#field-{self.field_stage}").focus()
-            instruction = (
-                "Ctrl+N: finish fields  ·  Ctrl+L: previous field  ·  Esc: cancel"
-            )
-        else:
-            self.ready_to_save = True
-            instruction = "Ctrl+S: save  ·  Ctrl+L: previous field  ·  Esc: cancel"
-        self.query_one("#instructions", Static).update(instruction)
-
-    def action_previous_field(self) -> None:
-        if self.ready_to_save:
-            self.ready_to_save = False
-            self.field_stage = len(self.fields) - 1
-        elif self.field_stage > 0:
-            self.field_stage -= 1
-        else:
-            return
-        self.query_one(f"#field-{self.field_stage}").focus()
-        self.query_one("#instructions", Static).update(
-            "Ctrl+N: next field  ·  Ctrl+L: previous field  ·  Esc: cancel"
-        )
-
     def action_save(self) -> None:
-        if not self.ready_to_save:
-            return
         values: list[str] = []
         for index, (_label, _initial, multiline) in enumerate(self.fields):
             if multiline:
