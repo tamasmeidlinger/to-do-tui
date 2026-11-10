@@ -1535,11 +1535,11 @@ class InfoDialog(ModalScreen[bool | None]):
 
 
 class FormDialog(ModalScreen[list[str] | None]):
-    """Edit fields with the normal Tab navigation, then save with Ctrl+S."""
+    """Edit fields with the normal Tab navigation, then save with Enter."""
 
     BINDINGS = [
         Binding("escape", "cancel", show=False, priority=True),
-        Binding("ctrl+s", "save", show=False, priority=True),
+        Binding("enter", "save", show=False, priority=True),
     ]
     CSS = """
     FormDialog {
@@ -1597,7 +1597,7 @@ class FormDialog(ModalScreen[list[str] | None]):
                 else:
                     yield Input(value, id=f"field-{index}", classes="field-input")
             yield Static(
-                "Tab: next field  ·  Ctrl+S: save  ·  Esc: cancel",
+                "Tab: next field  ·  Enter: save  ·  Esc: cancel",
                 id="instructions",
             )
 
